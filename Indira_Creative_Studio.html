@@ -358,37 +358,29 @@ const DESG_GRAY = '#4A4A4A';
 const CIRCLE = [371.8, 166.0, 763.8, 558.0];
 const GOLD_INSET = 1.6;   /* photo tucks under the gold so no white fringe */
 const GOLD_WIDTH = 6.5;   /* bold ring on the 768 art */
+/* Doctor name plate — corporate and centre reuse this block so all three match. */
+const NAMEPLATE = [430, 575, 720, 752];
+const NAME_BLOCK = {
+  align: 'center', textX: 568, maxW: 280,
+  name: { baseline: 650, size: 26, weight: 700, fill: NAME_PINK, font: 'Playfair Display, Georgia, serif' },
+  desg: { baseline: 683, size: 15, weight: 400, fill: DESG_GRAY },
+  loc: { baseline: 734, size: 14, weight: 500, fill: DESG_GRAY, prefix: 'Indira IVF, ', prefixFill: NAME_PINK },
+  ruleY: 704,
+  patches: [[430, 618, 710, 658], [470, 666, 670, 690], [430, 716, 720, 746]],
+  patchFill: '#FCFCFC'
+};
 const PRESETS = {
   corporate: {
     label: 'Corporate employee · Janmashtami', baseW: 768, aspect: 768 / 1024,
-    ellipse: CIRCLE,
-    align: 'center', textX: 570, maxW: 268,
-    name: { baseline: 624, size: 26, weight: 700, fill: NAME_PINK, font: 'Playfair Display, Georgia, serif' },
-    desg: { baseline: 653, size: 15, weight: 400, fill: DESG_GRAY },
-    loc: { baseline: 685, size: 14, weight: 500, fill: DESG_GRAY, prefix: 'Indira IVF, ', prefixFill: NAME_PINK },
-    patches: [[458, 598, 682, 632], [470, 638, 670, 660], [430, 668, 710, 696]],
-    patchFill: '#FDFDFD'
+    ellipse: CIRCLE, ...NAME_BLOCK
   },
   centre: {
     label: 'Centre employee · Janmashtami', baseW: 768, aspect: 768 / 1024,
-    ellipse: CIRCLE,
-    align: 'center', textX: 569, maxW: 268,
-    name: { baseline: 632, size: 26, weight: 700, fill: NAME_PINK, font: 'Playfair Display, Georgia, serif' },
-    desg: { baseline: 656, size: 15, weight: 400, fill: DESG_GRAY },
-    loc: { baseline: 691, size: 14, weight: 500, fill: DESG_GRAY, prefix: 'Indira IVF, ', prefixFill: NAME_PINK },
-    patches: [[458, 606, 682, 640], [470, 644, 670, 666], [430, 674, 710, 702]],
-    patchFill: '#FDFDFD'
+    ellipse: CIRCLE, ...NAME_BLOCK
   },
   doctor: {
     label: 'Doctor · Janmashtami', baseW: 768, aspect: 768 / 1024,
-    ellipse: CIRCLE,
-    align: 'center', textX: 568, maxW: 280,
-    namePrefix: 'Dr. ',
-    name: { baseline: 650, size: 26, weight: 700, fill: NAME_PINK, font: 'Playfair Display, Georgia, serif' },
-    desg: { baseline: 683, size: 15, weight: 400, fill: DESG_GRAY },
-    loc: { baseline: 734, size: 14, weight: 500, fill: DESG_GRAY, prefix: 'Indira IVF, ', prefixFill: NAME_PINK },
-    patches: [[430, 618, 710, 658], [470, 666, 670, 690], [430, 716, 720, 746]],
-    patchFill: '#FCFCFC'
+    ellipse: CIRCLE, namePrefix: 'Dr. ', ...NAME_BLOCK
   }
 };
 const PATCH_FILL = '#FDFDFD';
@@ -539,6 +531,16 @@ function graftDoctorCircle(ctx, frame, src, ecx, ecy, r, k){
   ctx.drawImage(src, 0, 0);
   ctx.restore();
 }
+function graftDoctorNameplate(ctx, frame, k){
+  /* Copy the Doctor name plate (floral rule, dotted divider, spacing) onto other layouts. */
+  const [x0, y0, x1, y1] = NAMEPLATE;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x0 * k, y0 * k, (x1 - x0) * k, (y1 - y0) * k);
+  ctx.clip();
+  ctx.drawImage(frame, 0, 0);
+  ctx.restore();
+}
 function composeTemplate(img, geo, frameSrc, punchWell){
   const c = document.createElement('canvas');
   c.width = img.width;
@@ -547,7 +549,10 @@ function composeTemplate(img, geo, frameSrc, punchWell){
   x.drawImage(img, 0, 0);
   const { ecx, ecy, r, k, photoR, ringR } = circleGeom(img, geo);
   const frame = frameSrc || img;
-  if (frame !== img) graftDoctorCircle(x, frame, img, ecx, ecy, r, k);
+  if (frame !== img){
+    graftDoctorCircle(x, frame, img, ecx, ecy, r, k);
+    graftDoctorNameplate(x, frame, k);
+  }
   erasePinkRingDots(x, ecx, ecy, r, k);
   if (!punchWell){
     paintBoldGoldRing(x, ecx, ecy, ringR, k);
@@ -1193,6 +1198,18 @@ function drawCreative(ctx, W, person){
 
   ctx.fillStyle = p.patchFill || PATCH_FILL;
   p.patches.forEach(b => ctx.fillRect(b[0] * k, b[1] * k, (b[2] - b[0]) * k, (b[3] - b[1]) * k));
+  if (p.ruleY){
+    ctx.save();
+    ctx.strokeStyle = NAME_PINK;
+    ctx.lineWidth = Math.max(1.25, 1.2 * k);
+    ctx.setLineDash([1.8 * k, 3.2 * k]);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo((p.textX - 116) * k, p.ruleY * k);
+    ctx.lineTo((p.textX + 116) * k, p.ruleY * k);
+    ctx.stroke();
+    ctx.restore();
+  }
 
   ctx.textAlign = p.align === 'center' ? 'center' : 'left';
   ctx.textBaseline = 'alphabetic';
