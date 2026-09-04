@@ -525,13 +525,18 @@ function paintBoldGoldRing(ctx, ecx, ecy, ringR, k){
   ctx.stroke();
   ctx.restore();
 }
-function graftDoctorCircle(ctx, frame, ecx, ecy, r){
+function graftDoctorCircle(ctx, frame, src, ecx, ecy, r, k){
   /* Replace this layout's well/ring with the Doctor circle so every template matches. */
   ctx.save();
   ctx.beginPath();
   ctx.arc(ecx, ecy, r + 40, 0, Math.PI * 2);
   ctx.clip();
   ctx.drawImage(frame, 0, 0);
+  /* The disk overlaps the last i of Janmashtami — put this layout's letters back. */
+  ctx.beginPath();
+  ctx.rect(0, 0, ecx - r - 8 * k, ctx.canvas.height);
+  ctx.clip();
+  ctx.drawImage(src, 0, 0);
   ctx.restore();
 }
 function composeTemplate(img, geo, frameSrc, punchWell){
@@ -542,7 +547,7 @@ function composeTemplate(img, geo, frameSrc, punchWell){
   x.drawImage(img, 0, 0);
   const { ecx, ecy, r, k, photoR, ringR } = circleGeom(img, geo);
   const frame = frameSrc || img;
-  if (frame !== img) graftDoctorCircle(x, frame, ecx, ecy, r);
+  if (frame !== img) graftDoctorCircle(x, frame, img, ecx, ecy, r, k);
   erasePinkRingDots(x, ecx, ecy, r, k);
   if (!punchWell){
     paintBoldGoldRing(x, ecx, ecy, ringR, k);
@@ -692,8 +697,15 @@ function stampCircleDecor(ctx, src, ecx, ecy, r, k){
         }
       }
     }
-    /* Keep gold ring / lotuses / gold dots and the pink top lotus. Drop the pink dashes. */
-    if (!goldN && pinkN < minLotus) continue;
+    /* Keep gold ring / lotuses / gold dots and the pink top lotus. Drop the pink dashes
+       and the greeting letters that sit just left of the circle (the last i of Janmashtami). */
+    if (!goldN){
+      if (pinkN < minLotus) continue;
+      let cx = 0, cy = 0;
+      for (const p of comp){ cx += p % lw; cy += (p / lw) | 0; }
+      cx /= comp.length; cy /= comp.length;
+      if (cy > ocy - r * 0.55 || Math.hypot(cx - ocx, cy - ocy) > r + 20 * k) continue;
+    }
     const goldOnly = goldN && pinkN < minLotus;
     for (const p of comp){
       const x = p % lw, y = (p / lw) | 0;
